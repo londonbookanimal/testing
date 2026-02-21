@@ -34,3 +34,4 @@ targets:
         SWIFT_VERSION: "5.9"
         IPHONEOS_DEPLOYMENT_TARGET: "17.0"
         TARGETED_DEVICE_FAMILY: "1"   # iPhone only
+        SWIFT_ENABLE_EXPLICIT_MODULES: NO
