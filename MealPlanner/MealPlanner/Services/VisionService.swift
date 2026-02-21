@@ -97,6 +97,57 @@ class VisionService {
         }
     }
 
+    // MARK: - Analyse receipt image
+
+    /// Sends a receipt photo to GPT-4o Vision and returns a list of purchased food items.
+    func scanReceipt(image: UIImage, defaultLocation: FoodLocation) async throws -> [FoodItem] {
+        guard let base64Image = image.jpegData(compressionQuality: 0.8)?.base64EncodedString() else {
+            throw VisionError.imageEncodingFailed
+        }
+
+        let prompt = """
+        You are a grocery receipt scanner. Extract all food and grocery items from this receipt image.
+
+        Respond ONLY with a valid JSON array. Each element must have these fields:
+        - name (string): the product name (clean it up, remove SKUs or price codes)
+        - category (string): one of [Produce, Dairy, Meat & Seafood, Grains & Pasta, Canned Goods, Condiments & Sauces, Spices & Seasonings, Frozen, Snacks, Beverages, Other]
+        - quantity (number): quantity purchased (use 1 if not shown)
+        - unit (string): appropriate unit (e.g. "unit", "bag", "bottle", "pack")
+
+        Only include food and drink items. Ignore non-food items like cleaning products, toiletries, or household goods.
+
+        Example: [{"name":"Whole Milk","category":"Dairy","quantity":1,"unit":"jug"},{"name":"Sourdough Bread","category":"Grains & Pasta","quantity":1,"unit":"loaf"}]
+        """
+
+        let requestBody: [String: Any] = [
+            "model": "gpt-4o",
+            "max_tokens": 1500,
+            "messages": [
+                [
+                    "role": "user",
+                    "content": [
+                        ["type": "text", "text": prompt],
+                        ["type": "image_url", "image_url": ["url": "data:image/jpeg;base64,\(base64Image)"]]
+                    ]
+                ]
+            ]
+        ]
+
+        var request = URLRequest(url: endpoint)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw VisionError.apiRequestFailed
+        }
+
+        return try parseVisionResponse(data: data, location: defaultLocation)
+    }
+
     // MARK: - Errors
 
     enum VisionError: LocalizedError {

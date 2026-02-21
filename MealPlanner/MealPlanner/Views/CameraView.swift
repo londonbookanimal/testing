@@ -10,6 +10,7 @@ struct CameraView: View {
     @State private var capturedImage: UIImage?
     @State private var showPhotoPicker = false
     @State private var showReview = false
+    @State private var showCameraCapture = false
 
     var body: some View {
         NavigationStack {
@@ -39,18 +40,44 @@ struct CameraView: View {
                 }
 
                 // Buttons
-                HStack(spacing: 16) {
-                    PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
-                        Label("Choose Photo", systemImage: "photo")
-                            .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.bordered)
-                    .onChange(of: selectedPhotoItem) { _, newItem in
-                        Task {
-                            if let data = try? await newItem?.loadTransferable(type: Data.self),
-                               let image = UIImage(data: data) {
-                                capturedImage = image
+                VStack(spacing: 12) {
+                    HStack(spacing: 16) {
+                        Button {
+                            showCameraCapture = true
+                        } label: {
+                            Label("Take Photo", systemImage: "camera")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.bordered)
+
+                        PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+                            Label("Photo Library", systemImage: "photo.on.rectangle")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.bordered)
+                        .onChange(of: selectedPhotoItem) { _, newItem in
+                            Task {
+                                if let data = try? await newItem?.loadTransferable(type: Data.self),
+                                   let image = UIImage(data: data) {
+                                    capturedImage = image
+                                }
                             }
+                        }
+
+                        if capturedImage != nil {
+                            Button {
+                                Task {
+                                    if let image = capturedImage {
+                                        await inventoryVM.scanImage(image, location: location)
+                                        showReview = true
+                                    }
+                                }
+                            } label: {
+                                Label("Scan Items", systemImage: "sparkles")
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .disabled(inventoryVM.isScanning)
                         }
                     }
 
@@ -58,22 +85,22 @@ struct CameraView: View {
                         Button {
                             Task {
                                 if let image = capturedImage {
-                                    await inventoryVM.scanImage(image, location: location)
+                                    await inventoryVM.scanReceipt(image, defaultLocation: location)
                                     showReview = true
                                 }
                             }
                         } label: {
-                            Label("Scan Items", systemImage: "sparkles")
+                            Label("Scan Receipt", systemImage: "doc.text.viewfinder")
                                 .frame(maxWidth: .infinity)
                         }
-                        .buttonStyle(.borderedProminent)
+                        .buttonStyle(.bordered)
                         .disabled(inventoryVM.isScanning)
                     }
                 }
                 .padding(.horizontal)
 
                 if inventoryVM.isScanning {
-                    ProgressView("Identifying food items...")
+                    ProgressView("Scanning...")
                 }
             }
             .navigationTitle("Scan \(location.rawValue)")
@@ -86,6 +113,42 @@ struct CameraView: View {
             .sheet(isPresented: $showReview) {
                 ScannedItemsReviewView(location: location)
             }
+            .sheet(isPresented: $showCameraCapture) {
+                CameraCaptureView(image: $capturedImage)
+            }
+        }
+    }
+}
+
+// MARK: - Camera Capture (wraps UIImagePickerController)
+
+struct CameraCaptureView: UIViewControllerRepresentable {
+    @Binding var image: UIImage?
+    @Environment(\.dismiss) private var dismiss
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.sourceType = .camera
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+
+    class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+        let parent: CameraCaptureView
+        init(_ parent: CameraCaptureView) { self.parent = parent }
+
+        func imagePickerController(_ picker: UIImagePickerController,
+                                   didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
+            parent.image = info[.originalImage] as? UIImage
+            parent.dismiss()
+        }
+
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            parent.dismiss()
         }
     }
 }

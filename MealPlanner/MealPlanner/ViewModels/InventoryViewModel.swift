@@ -53,6 +53,17 @@ class InventoryViewModel: ObservableObject {
         }
     }
 
+    /// Sends a receipt photo to Vision API and populates scannedItems for user review.
+    func scanReceipt(_ image: UIImage, defaultLocation: FoodLocation) async {
+        isScanning = true
+        defer { isScanning = false }
+        do {
+            scannedItems = try await vision.scanReceipt(image: image, defaultLocation: defaultLocation)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     /// Saves the user-confirmed scanned items to Firebase and updates local state.
     func confirmScannedItems(location: FoodLocation) async {
         do {
