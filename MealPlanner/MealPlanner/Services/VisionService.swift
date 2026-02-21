@@ -99,7 +99,8 @@ class VisionService {
 
     // MARK: - Analyse receipt image
 
-    /// Sends a receipt photo to GPT-4o Vision and returns a list of purchased food items.
+    /// Sends a receipt photo to GPT-4o Vision and returns a list of purchased food items,
+    /// each assigned to the most appropriate storage location.
     func scanReceipt(image: UIImage, defaultLocation: FoodLocation) async throws -> [FoodItem] {
         guard let base64Image = image.jpegData(compressionQuality: 0.8)?.base64EncodedString() else {
             throw VisionError.imageEncodingFailed
@@ -113,10 +114,14 @@ class VisionService {
         - category (string): one of [Produce, Dairy, Meat & Seafood, Grains & Pasta, Canned Goods, Condiments & Sauces, Spices & Seasonings, Frozen, Snacks, Beverages, Other]
         - quantity (number): quantity purchased (use 1 if not shown)
         - unit (string): appropriate unit (e.g. "unit", "bag", "bottle", "pack")
+        - location (string): where this item is typically stored — one of [Fridge, Pantry, Freezer]
+          • Fridge: fresh produce, dairy, meat, fish, opened sauces, fresh juice, eggs
+          • Pantry: tins, canned goods, dry pasta, rice, cereals, bread, crisps, biscuits, cooking oils, condiments (unopened), long-life drinks
+          • Freezer: frozen meals, frozen veg, frozen meat, ice cream
 
         Only include food and drink items. Ignore non-food items like cleaning products, toiletries, or household goods.
 
-        Example: [{"name":"Whole Milk","category":"Dairy","quantity":1,"unit":"jug"},{"name":"Sourdough Bread","category":"Grains & Pasta","quantity":1,"unit":"loaf"}]
+        Example: [{"name":"Whole Milk","category":"Dairy","quantity":1,"unit":"jug","location":"Fridge"},{"name":"Baked Beans","category":"Canned Goods","quantity":2,"unit":"tin","location":"Pantry"},{"name":"Frozen Peas","category":"Frozen","quantity":1,"unit":"bag","location":"Freezer"}]
         """
 
         let requestBody: [String: Any] = [
@@ -145,7 +150,38 @@ class VisionService {
             throw VisionError.apiRequestFailed
         }
 
-        return try parseVisionResponse(data: data, location: defaultLocation)
+        return try parseReceiptResponse(data: data, defaultLocation: defaultLocation)
+    }
+
+    private func parseReceiptResponse(data: Data, defaultLocation: FoodLocation) throws -> [FoodItem] {
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let choices = json["choices"] as? [[String: Any]],
+              let firstChoice = choices.first,
+              let message = firstChoice["message"] as? [String: Any],
+              let content = message["content"] as? String else {
+            throw VisionError.unexpectedResponseFormat
+        }
+
+        let cleaned = content
+            .replacingOccurrences(of: "```json", with: "")
+            .replacingOccurrences(of: "```", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard let arrayData = cleaned.data(using: .utf8),
+              let rawItems = try JSONSerialization.jsonObject(with: arrayData) as? [[String: Any]] else {
+            throw VisionError.jsonParsingFailed
+        }
+
+        return rawItems.compactMap { dict -> FoodItem? in
+            guard let name = dict["name"] as? String else { return nil }
+            let categoryRaw = dict["category"] as? String ?? "Other"
+            let category = FoodCategory.allCases.first { $0.rawValue == categoryRaw } ?? .other
+            let quantity = dict["quantity"] as? Double ?? 1
+            let unit = dict["unit"] as? String ?? "unit"
+            let locationRaw = dict["location"] as? String ?? defaultLocation.rawValue
+            let location = FoodLocation.allCases.first { $0.rawValue == locationRaw } ?? defaultLocation
+            return FoodItem(name: name, category: category, quantity: quantity, unit: unit, location: location)
+        }
     }
 
     // MARK: - Errors

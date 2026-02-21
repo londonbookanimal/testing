@@ -162,6 +162,10 @@ struct ScannedItemsReviewView: View {
 
     @State private var items: [FoodItem] = []
 
+    private var hasMultipleLocations: Bool {
+        Set(items.map(\.location)).count > 1
+    }
+
     var body: some View {
         NavigationStack {
             Group {
@@ -171,6 +175,14 @@ struct ScannedItemsReviewView: View {
                         .padding()
                 } else {
                     List {
+                        if hasMultipleLocations {
+                            Section {
+                                Label("Items have been sorted into Fridge, Pantry, and Freezer automatically. Tap a location badge to change it.",
+                                      systemImage: "info.circle")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
                         Section("Found \(items.count) item(s) — remove any that are wrong") {
                             ForEach(items.indices, id: \.self) { index in
                                 HStack {
@@ -180,6 +192,24 @@ struct ScannedItemsReviewView: View {
                                         Text("\(items[index].quantity, specifier: "%.0f") \(items[index].unit)")
                                             .font(.caption)
                                             .foregroundStyle(.secondary)
+                                    }
+                                    Spacer()
+                                    Menu {
+                                        ForEach(FoodLocation.allCases, id: \.self) { loc in
+                                            Button {
+                                                items[index].location = loc
+                                            } label: {
+                                                Label(loc.rawValue, systemImage: locationIcon(loc))
+                                            }
+                                        }
+                                    } label: {
+                                        Text(items[index].location.rawValue)
+                                            .font(.caption.weight(.medium))
+                                            .padding(.horizontal, 8)
+                                            .padding(.vertical, 4)
+                                            .background(locationColor(items[index].location).opacity(0.15))
+                                            .foregroundStyle(locationColor(items[index].location))
+                                            .clipShape(Capsule())
                                     }
                                 }
                                 .swipeActions {
@@ -214,6 +244,22 @@ struct ScannedItemsReviewView: View {
             .onAppear {
                 items = inventoryVM.scannedItems
             }
+        }
+    }
+
+    private func locationIcon(_ location: FoodLocation) -> String {
+        switch location {
+        case .fridge:  return "thermometer.snowflake"
+        case .pantry:  return "cabinet"
+        case .freezer: return "snowflake"
+        }
+    }
+
+    private func locationColor(_ location: FoodLocation) -> Color {
+        switch location {
+        case .fridge:  return .blue
+        case .pantry:  return .orange
+        case .freezer: return .cyan
         }
     }
 }
