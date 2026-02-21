@@ -208,7 +208,7 @@ struct MultipleSelectionRow: View {
                 Text(label)
                 Spacer()
                 if isSelected {
-                    Image(systemName: "checkmark").foregroundStyle(.accentColor)
+                    Image(systemName: "checkmark").foregroundStyle(Color.accentColor)
                 }
             }
         }
