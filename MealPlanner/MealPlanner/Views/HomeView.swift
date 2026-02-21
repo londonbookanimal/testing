@@ -35,7 +35,7 @@ struct HomeView: View {
                 }
                 .padding()
             }
-            .navigationTitle("Dinner Planner")
+            .navigationTitle("What's For Dinner")
             .task {
                 await inventoryVM.load()
                 await mealPlanVM.loadWeek()

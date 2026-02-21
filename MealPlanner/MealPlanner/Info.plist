@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleDisplayName</key>
-    <string>Dinner Planner</string>
+    <string>What's For Dinner</string>
     <key>CFBundleIdentifier</key>
     <string>com.yourfamily.mealplanner</string>
     <key>CFBundleVersion</key>
