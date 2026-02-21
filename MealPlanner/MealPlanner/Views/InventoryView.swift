@@ -136,7 +136,7 @@ struct AddFoodItemView: View {
     @State private var category: FoodCategory = .other
     @State private var quantity = 1.0
     @State private var unit = "unit"
-    @State private var expiryDate: Date = Calendar.current.date(byAdding: .week, value: 1, to: Date()) ?? Date()
+    @State private var expiryDate: Date = Calendar.current.date(byAdding: .weekOfYear, value: 1, to: Date()) ?? Date()
     @State private var hasExpiry = false
 
     var body: some View {
