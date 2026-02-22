@@ -65,13 +65,16 @@ class InventoryViewModel: ObservableObject {
     }
 
     /// Saves the user-confirmed scanned items to Firebase and updates local state.
-    func confirmScannedItems(location: FoodLocation) async {
+    /// Returns true if save succeeded, false otherwise (errorMessage will be set).
+    func confirmScannedItems(location: FoodLocation) async -> Bool {
         do {
             try await firebase.bulkSaveFoodItems(scannedItems)
             await load()
             scannedItems = []
+            return true
         } catch {
             errorMessage = error.localizedDescription
+            return false
         }
     }
 

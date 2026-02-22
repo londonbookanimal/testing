@@ -110,6 +110,14 @@ struct CameraView: View {
                     Button("Cancel") { dismiss() }
                 }
             }
+            .alert("Scan Failed", isPresented: Binding(
+                get: { inventoryVM.errorMessage != nil && !showReview },
+                set: { if !$0 { inventoryVM.errorMessage = nil } }
+            )) {
+                Button("OK") { inventoryVM.errorMessage = nil }
+            } message: {
+                Text(inventoryVM.errorMessage ?? "")
+            }
             .sheet(isPresented: $showReview) {
                 ScannedItemsReviewView(location: location)
             }
@@ -234,12 +242,20 @@ struct ScannedItemsReviewView: View {
                     Button("Add All") {
                         inventoryVM.scannedItems = items
                         Task {
-                            await inventoryVM.confirmScannedItems(location: location)
-                            dismiss()
+                            let saved = await inventoryVM.confirmScannedItems(location: location)
+                            if saved { dismiss() }
                         }
                     }
                     .disabled(items.isEmpty)
                 }
+            }
+            .alert("Could Not Save", isPresented: Binding(
+                get: { inventoryVM.errorMessage != nil },
+                set: { if !$0 { inventoryVM.errorMessage = nil } }
+            )) {
+                Button("OK") { inventoryVM.errorMessage = nil }
+            } message: {
+                Text(inventoryVM.errorMessage ?? "")
             }
             .onAppear {
                 items = inventoryVM.scannedItems
