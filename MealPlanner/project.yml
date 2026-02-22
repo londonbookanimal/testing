@@ -20,7 +20,7 @@ targets:
     sources:
       - path: MealPlanner
     info:
-      path: MealPlanner/Info.plist
+      path: MealPlanner/info.plist
     dependencies:
       - package: Firebase
         product: FirebaseFirestore
