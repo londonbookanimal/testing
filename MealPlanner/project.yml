@@ -19,8 +19,6 @@ targets:
     platform: iOS
     sources:
       - path: MealPlanner
-    info:
-      path: MealPlanner/info.plist
     dependencies:
       - package: Firebase
         product: FirebaseFirestore
@@ -35,3 +33,5 @@ targets:
         IPHONEOS_DEPLOYMENT_TARGET: "17.0"
         TARGETED_DEVICE_FAMILY: "1"   # iPhone only
         SWIFT_ENABLE_EXPLICIT_MODULES: NO
+        INFOPLIST_FILE: MealPlanner/info.plist
+        GENERATE_INFOPLIST_FILE: NO
