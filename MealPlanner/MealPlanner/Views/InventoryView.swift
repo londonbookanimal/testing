@@ -154,6 +154,12 @@ struct AddFoodItemView: View {
     @State private var unit = "unit"
     @State private var expiryDate: Date = Calendar.current.date(byAdding: .weekOfYear, value: 1, to: Date()) ?? Date()
     @State private var hasExpiry = false
+    @State private var selectedLocation: FoodLocation
+
+    init(location: FoodLocation) {
+        self.location = location
+        self._selectedLocation = State(initialValue: location)
+    }
 
     var body: some View {
         NavigationStack {
@@ -165,10 +171,7 @@ struct AddFoodItemView: View {
                             Text("\(cat.emoji) \(cat.rawValue)").tag(cat)
                         }
                     }
-                    Picker("Location", selection: Binding(
-                        get: { location },
-                        set: { _ in }
-                    )) {
+                    Picker("Location", selection: $selectedLocation) {
                         ForEach(FoodLocation.allCases, id: \.self) { loc in
                             Text(loc.rawValue).tag(loc)
                         }
@@ -202,7 +205,7 @@ struct AddFoodItemView: View {
                                 category: category,
                                 quantity: quantity,
                                 unit: unit,
-                                location: location,
+                                location: selectedLocation,
                                 expiryDate: hasExpiry ? expiryDate : nil
                             )
                             await inventoryVM.addItem(item)
