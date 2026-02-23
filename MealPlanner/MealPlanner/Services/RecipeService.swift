@@ -20,13 +20,10 @@ class RecipeService {
     func generateDinnerSuggestions(
         availableFood: [FoodItem],
         familyMembers: [FamilyMember],
-        count: Int = 3,
-        excludeRecipeNames: [String] = []
+        count: Int = 3
     ) async throws -> [Recipe] {
         let foodList = availableFood.map { "\($0.quantity) \($0.unit) \($0.name)" }.joined(separator: ", ")
         let membersDescription = familyMembers.map { memberSummary($0) }.joined(separator: "\n")
-        let exclusionLine = excludeRecipeNames.isEmpty ? "" :
-            "- Do NOT suggest any of these recipes (already seen or rejected): \(excludeRecipeNames.joined(separator: ", "))\n"
 
         let prompt = """
         You are a professional family dinner planner. Generate \(count) dinner recipe suggestions.
@@ -42,7 +39,6 @@ class RecipeService {
         - Recipes must respect ALL dietary restrictions and allergies listed above.
         - Prefer ingredients already available, but a few extra items are acceptable.
         - Recipes should be practical for a weeknight dinner.
-        \(exclusionLine)
 
         Respond ONLY with a valid JSON array of recipes. Each recipe must have:
         - name (string)

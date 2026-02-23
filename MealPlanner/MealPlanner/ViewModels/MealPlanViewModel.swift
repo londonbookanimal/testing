@@ -33,13 +33,13 @@ class MealPlanViewModel: ObservableObject {
         defer { isGenerating = false }
         do {
             let cutoff = Date().addingTimeInterval(-12 * 3600)
-            let recentlySeen = seenRecipeNames.filter { $0.value > cutoff }.map { $0.key }
-            suggestedRecipes = try await recipeService.generateDinnerSuggestions(
+            let recentlySeen = Set(seenRecipeNames.filter { $0.value > cutoff }.map { $0.key })
+            let results = try await recipeService.generateDinnerSuggestions(
                 availableFood: inventory,
                 familyMembers: family,
-                count: 3,
-                excludeRecipeNames: recentlySeen
+                count: 3
             )
+            suggestedRecipes = results.filter { !recentlySeen.contains($0.name) }
         } catch {
             errorMessage = error.localizedDescription
         }
