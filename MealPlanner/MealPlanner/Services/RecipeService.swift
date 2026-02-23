@@ -35,6 +35,7 @@ class RecipeService {
         \(membersDescription)
 
         Rules:
+        - Generate \(count) DIFFERENT recipes — each must have a distinct name, cuisine, and cooking style.
         - Recipes must respect ALL dietary restrictions and allergies listed above.
         - Prefer ingredients already available, but a few extra items are acceptable.
         - Recipes should be practical for a weeknight dinner.
@@ -56,7 +57,8 @@ class RecipeService {
 
         let requestBody: [String: Any] = [
             "model": "gpt-4o",
-            "max_tokens": 3000,
+            "max_tokens": 4000,
+            "temperature": 0.9,
             "messages": [
                 ["role": "user", "content": prompt]
             ]
