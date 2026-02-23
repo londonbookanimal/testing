@@ -11,7 +11,7 @@ class MealPlanViewModel: ObservableObject {
 
     private let firebase = FirebaseService.shared
     private let recipeService = RecipeService.shared
-    private var seenRecipeNames: Set<String> = []
+    private var seenRecipeNames: [String: Date] = [:]
 
     // MARK: - Load
 
@@ -32,11 +32,13 @@ class MealPlanViewModel: ObservableObject {
         isGenerating = true
         defer { isGenerating = false }
         do {
+            let cutoff = Date().addingTimeInterval(-12 * 3600)
+            let recentlySeen = seenRecipeNames.filter { $0.value > cutoff }.map { $0.key }
             suggestedRecipes = try await recipeService.generateDinnerSuggestions(
                 availableFood: inventory,
                 familyMembers: family,
                 count: 3,
-                excludeRecipeNames: Array(seenRecipeNames)
+                excludeRecipeNames: recentlySeen
             )
         } catch {
             errorMessage = error.localizedDescription
@@ -46,7 +48,7 @@ class MealPlanViewModel: ObservableObject {
     // MARK: - Plan management
 
     func assignRecipe(_ recipe: Recipe, toDate date: Date) async {
-        seenRecipeNames.insert(recipe.name)
+        seenRecipeNames[recipe.name] = Date()
         var plan = MealPlan(date: date, dinnerRecipeId: recipe.id)
         plan.dinnerRecipe = recipe
         do {
@@ -85,7 +87,7 @@ class MealPlanViewModel: ObservableObject {
     }
 
     func dismissSuggestion(_ recipe: Recipe) {
-        seenRecipeNames.insert(recipe.name)
+        seenRecipeNames[recipe.name] = Date()
         suggestedRecipes.removeAll { $0.id == recipe.id }
     }
 
