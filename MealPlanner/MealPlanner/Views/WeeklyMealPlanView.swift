@@ -79,7 +79,7 @@ struct WeeklyMealPlanView: View {
             Text("📅").font(.system(size: 48))
             Text("No dinner planned")
                 .font(.headline)
-            Text("Tap 'Get Ideas' to generate recipe suggestions based on your fridge and pantry.")
+            Text("Tap 'Get Ideas' to generate recipe suggestions based on what's in your food list.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)

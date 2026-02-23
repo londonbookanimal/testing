@@ -97,6 +97,24 @@ class InventoryViewModel: ObservableObject {
         }
     }
 
+    /// Returns inventory items whose names fuzzy-match any of the scanned items.
+    func matchItemsInInventory(_ scanned: [FoodItem]) -> [FoodItem] {
+        let scannedNames = scanned.map { $0.name.lowercased().trimmingCharacters(in: .whitespaces) }
+        return allItems.filter { item in
+            let normalized = item.name.lowercased().trimmingCharacters(in: .whitespaces)
+            return scannedNames.contains { scannedName in
+                normalized.contains(scannedName) || scannedName.contains(normalized)
+            }
+        }
+    }
+
+    /// Deletes items from inventory that match the provided list (used when tracking food being consumed).
+    func removeMatchedItems(_ items: [FoodItem]) async {
+        for item in items {
+            await deleteItem(item)
+        }
+    }
+
     // MARK: - Local state helpers
 
     private func append(_ item: FoodItem) {

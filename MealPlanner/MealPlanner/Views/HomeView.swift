@@ -14,11 +14,8 @@ struct HomeView: View {
 
                     // Quick action tiles
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                        NavigationLink(destination: InventoryView(location: .fridge)) {
-                            QuickActionTile(title: "Fridge", emoji: "🧊", color: .blue)
-                        }
-                        NavigationLink(destination: InventoryView(location: .pantry)) {
-                            QuickActionTile(title: "Pantry", emoji: "🫙", color: .orange)
+                        NavigationLink(destination: InventoryView(location: nil)) {
+                            QuickActionTile(title: "Food", emoji: "🛒", color: .teal)
                         }
                         NavigationLink(destination: FamilyProfilesView()) {
                             QuickActionTile(title: "Family", emoji: "👨‍👩‍👧‍👦", color: .purple)
@@ -97,9 +94,10 @@ struct TonightsDinnerCard: View {
                     }
                 }
             } else {
-                VStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 12) {
                     Text("No dinner planned yet")
                         .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity)
                     Button("Get Suggestions") {
                         Task {
                             await mealPlanVM.generateSuggestions(
@@ -109,11 +107,22 @@ struct TonightsDinnerCard: View {
                         }
                     }
                     .buttonStyle(.borderedProminent)
+                    .frame(maxWidth: .infinity)
                     if mealPlanVM.isGenerating {
                         ProgressView("Finding recipes...")
+                            .frame(maxWidth: .infinity)
+                    }
+                    if !mealPlanVM.suggestedRecipes.isEmpty {
+                        Divider()
+                        Text("Tonight's Options")
+                            .font(.subheadline.bold())
+                        ForEach(mealPlanVM.suggestedRecipes) { recipe in
+                            RecipeSuggestionCard(recipe: recipe) {
+                                Task { await mealPlanVM.assignRecipe(recipe, toDate: Date()) }
+                            }
+                        }
                     }
                 }
-                .frame(maxWidth: .infinity)
             }
         }
         .padding()

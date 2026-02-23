@@ -1,8 +1,14 @@
 import SwiftUI
 import PhotosUI
 
+enum ScanMode {
+    case add   // scan items to add to food list
+    case use   // scan items to remove from food list
+}
+
 struct CameraView: View {
     let location: FoodLocation
+    var mode: ScanMode = .add
     @EnvironmentObject var inventoryVM: InventoryViewModel
     @Environment(\.dismiss) private var dismiss
 
@@ -11,6 +17,16 @@ struct CameraView: View {
     @State private var showPhotoPicker = false
     @State private var showReview = false
     @State private var showCameraCapture = false
+
+    private var navTitle: String {
+        mode == .use ? "Use Food" : "Scan Food"
+    }
+
+    private var placeholderText: String {
+        mode == .use
+            ? "Take a photo of what you're about to use"
+            : "Take or choose a photo of your food"
+    }
 
     var body: some View {
         NavigationStack {
@@ -28,10 +44,10 @@ struct CameraView: View {
                         .frame(height: 280)
                         .overlay {
                             VStack(spacing: 12) {
-                                Image(systemName: "camera.fill")
+                                Image(systemName: mode == .use ? "minus.circle.fill" : "camera.fill")
                                     .font(.system(size: 48))
-                                    .foregroundStyle(.secondary)
-                                Text("Take or choose a photo of your \(location.rawValue.lowercased())")
+                                    .foregroundStyle(mode == .use ? .orange : .secondary)
+                                Text(placeholderText)
                                     .multilineTextAlignment(.center)
                                     .foregroundStyle(.secondary)
                             }
@@ -63,25 +79,29 @@ struct CameraView: View {
                                 }
                             }
                         }
-
-                        if capturedImage != nil {
-                            Button {
-                                Task {
-                                    if let image = capturedImage {
-                                        await inventoryVM.scanImage(image, location: location)
-                                        showReview = true
-                                    }
-                                }
-                            } label: {
-                                Label("Scan Items", systemImage: "sparkles")
-                                    .frame(maxWidth: .infinity)
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .disabled(inventoryVM.isScanning)
-                        }
                     }
 
                     if capturedImage != nil {
+                        Button {
+                            Task {
+                                if let image = capturedImage {
+                                    await inventoryVM.scanImage(image, location: location)
+                                    showReview = true
+                                }
+                            }
+                        } label: {
+                            Label(
+                                mode == .use ? "Identify Items to Remove" : "Scan Items",
+                                systemImage: mode == .use ? "minus.circle" : "sparkles"
+                            )
+                            .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(mode == .use ? .orange : .accentColor)
+                        .disabled(inventoryVM.isScanning)
+                    }
+
+                    if capturedImage != nil && mode == .add {
                         Button {
                             Task {
                                 if let image = capturedImage {
@@ -100,10 +120,10 @@ struct CameraView: View {
                 .padding(.horizontal)
 
                 if inventoryVM.isScanning {
-                    ProgressView("Scanning...")
+                    ProgressView(mode == .use ? "Identifying items..." : "Scanning...")
                 }
             }
-            .navigationTitle("Scan \(location.rawValue)")
+            .navigationTitle(navTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -119,7 +139,11 @@ struct CameraView: View {
                 Text(inventoryVM.errorMessage ?? "")
             }
             .sheet(isPresented: $showReview) {
-                ScannedItemsReviewView(location: location)
+                if mode == .use {
+                    UseFoodReviewView()
+                } else {
+                    ScannedItemsReviewView(location: location)
+                }
             }
             .sheet(isPresented: $showCameraCapture) {
                 CameraCaptureView(image: $capturedImage)
@@ -161,7 +185,7 @@ struct CameraCaptureView: UIViewControllerRepresentable {
     }
 }
 
-// MARK: - Scanned Items Review View
+// MARK: - Scanned Items Review View (add mode)
 
 struct ScannedItemsReviewView: View {
     let location: FoodLocation
@@ -276,6 +300,88 @@ struct ScannedItemsReviewView: View {
         case .fridge:  return .blue
         case .pantry:  return .orange
         case .freezer: return .cyan
+        }
+    }
+}
+
+// MARK: - Use Food Review View (remove mode)
+
+struct UseFoodReviewView: View {
+    @EnvironmentObject var inventoryVM: InventoryViewModel
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var items: [FoodItem] = []
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if items.isEmpty {
+                    VStack(spacing: 16) {
+                        Image(systemName: "questionmark.circle")
+                            .font(.system(size: 48))
+                            .foregroundStyle(.secondary)
+                        Text("No matching items found")
+                            .font(.headline)
+                        Text("None of the scanned items matched anything in your food list.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding()
+                } else {
+                    List {
+                        Section("These items will be removed from your food list") {
+                            ForEach(items.indices, id: \.self) { index in
+                                HStack {
+                                    Text(items[index].category.emoji)
+                                    Text(items[index].name)
+                                    Spacer()
+                                    Text(items[index].location.rawValue)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                .swipeActions {
+                                    Button(role: .destructive) {
+                                        items.remove(at: index)
+                                    } label: {
+                                        Label("Keep", systemImage: "arrow.uturn.left")
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Using These?")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                if !items.isEmpty {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Remove from Food") {
+                            Task {
+                                await inventoryVM.removeMatchedItems(items)
+                                dismiss()
+                            }
+                        }
+                        .tint(.orange)
+                    }
+                }
+            }
+            .alert("Error", isPresented: Binding(
+                get: { inventoryVM.errorMessage != nil },
+                set: { if !$0 { inventoryVM.errorMessage = nil } }
+            )) {
+                Button("OK") { inventoryVM.errorMessage = nil }
+            } message: {
+                Text(inventoryVM.errorMessage ?? "")
+            }
+            .onAppear {
+                // Match scanned items against inventory by name
+                items = inventoryVM.matchItemsInInventory(inventoryVM.scannedItems)
+            }
         }
     }
 }

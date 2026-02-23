@@ -2,15 +2,23 @@ import SwiftUI
 import PhotosUI
 
 struct InventoryView: View {
-    let location: FoodLocation
+    let location: FoodLocation?
     @EnvironmentObject var inventoryVM: InventoryViewModel
 
     @State private var showCamera = false
+    @State private var showUseFood = false
     @State private var showAddItem = false
     @State private var searchText = ""
     @State private var selectedCategory: FoodCategory?
 
-    private var items: [FoodItem] { inventoryVM.items(for: location) }
+    private var defaultLocation: FoodLocation { location ?? .fridge }
+
+    private var items: [FoodItem] {
+        if let loc = location {
+            return inventoryVM.items(for: loc)
+        }
+        return inventoryVM.allItems
+    }
 
     private var filteredItems: [FoodItem] {
         items.filter { item in
@@ -28,7 +36,7 @@ struct InventoryView: View {
         NavigationStack {
             Group {
                 if inventoryVM.isLoading {
-                    ProgressView("Loading \(location.rawValue)...")
+                    ProgressView("Loading food...")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if items.isEmpty {
                     emptyState
@@ -36,10 +44,15 @@ struct InventoryView: View {
                     itemList
                 }
             }
-            .navigationTitle(location.rawValue)
+            .navigationTitle(location?.rawValue ?? "Food")
             .searchable(text: $searchText, prompt: "Search items")
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
+                    Button {
+                        showUseFood = true
+                    } label: {
+                        Label("Use Food", systemImage: "minus.circle")
+                    }
                     Button {
                         showCamera = true
                     } label: {
@@ -53,10 +66,13 @@ struct InventoryView: View {
                 }
             }
             .sheet(isPresented: $showCamera) {
-                CameraView(location: location)
+                CameraView(location: defaultLocation, mode: .add)
+            }
+            .sheet(isPresented: $showUseFood) {
+                CameraView(location: defaultLocation, mode: .use)
             }
             .sheet(isPresented: $showAddItem) {
-                AddFoodItemView(location: location)
+                AddFoodItemView(location: defaultLocation)
             }
         }
     }
@@ -65,9 +81,9 @@ struct InventoryView: View {
 
     private var emptyState: some View {
         VStack(spacing: 20) {
-            Text(location == .fridge ? "🧊" : location == .pantry ? "🫙" : "❄️")
+            Text(location == .fridge ? "🧊" : location == .pantry ? "🫙" : location == .freezer ? "❄️" : "🛒")
                 .font(.system(size: 64))
-            Text("Your \(location.rawValue.lowercased()) is empty")
+            Text(location == nil ? "Your food list is empty" : "Your \(location!.rawValue.lowercased()) is empty")
                 .font(.headline)
             Text("Tap the camera icon to scan items, or use + to add manually.")
                 .font(.subheadline)
@@ -147,6 +163,14 @@ struct AddFoodItemView: View {
                     Picker("Category", selection: $category) {
                         ForEach(FoodCategory.allCases, id: \.self) { cat in
                             Text("\(cat.emoji) \(cat.rawValue)").tag(cat)
+                        }
+                    }
+                    Picker("Location", selection: Binding(
+                        get: { location },
+                        set: { _ in }
+                    )) {
+                        ForEach(FoodLocation.allCases, id: \.self) { loc in
+                            Text(loc.rawValue).tag(loc)
                         }
                     }
                 }
