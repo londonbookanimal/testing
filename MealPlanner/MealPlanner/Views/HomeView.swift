@@ -61,8 +61,16 @@ struct TonightsDinnerCard: View {
 
             if let plan = tonightsPlan, let recipe = plan.dinnerRecipe {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text(recipe.name)
-                        .font(.title2.bold())
+                    HStack {
+                        Text(recipe.name)
+                            .font(.title2.bold())
+                        Spacer()
+                        Button(role: .destructive) {
+                            Task { await mealPlanVM.removeRecipeFromPlan(plan) }
+                        } label: {
+                            Image(systemName: "trash")
+                        }
+                    }
                     Text(recipe.description)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
