@@ -156,9 +156,10 @@ class FirebaseService: ObservableObject {
         let snapshot = try await mealPlansCollection
             .whereField("date", isGreaterThanOrEqualTo: Timestamp(date: startDate))
             .whereField("date", isLessThanOrEqualTo: Timestamp(date: endDate))
-            .order(by: "date")
             .getDocuments()
-        return snapshot.documents.compactMap { try? $0.data(as: MealPlan.self) }
+        return snapshot.documents
+            .compactMap { try? $0.data(as: MealPlan.self) }
+            .sorted { $0.date < $1.date }
     }
 
     func saveMealPlan(_ plan: MealPlan) async throws -> MealPlan {
