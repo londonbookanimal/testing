@@ -100,6 +100,8 @@ struct WeeklyMealPlanView: View {
             ForEach(mealPlanVM.suggestedRecipes) { recipe in
                 RecipeSuggestionCard(recipe: recipe) {
                     Task { await mealPlanVM.assignRecipe(recipe, toDate: selectedDate) }
+                } onDismiss: {
+                    mealPlanVM.dismissSuggestion(recipe)
                 }
             }
         }
@@ -154,7 +156,15 @@ struct PlannedRecipeCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(recipe.name).font(.title2.bold())
+            HStack {
+                Text(recipe.name).font(.title2.bold())
+                Spacer()
+                Button(role: .destructive) {
+                    Task { await mealPlanVM.removeRecipeFromPlan(plan) }
+                } label: {
+                    Image(systemName: "trash")
+                }
+            }
             Text(recipe.description).foregroundStyle(.secondary)
 
             HStack {
@@ -245,6 +255,7 @@ struct PlannedRecipeCard: View {
 struct RecipeSuggestionCard: View {
     let recipe: Recipe
     let onAssign: () -> Void
+    let onDismiss: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -256,6 +267,11 @@ struct RecipeSuggestionCard: View {
                     .padding(.horizontal, 8).padding(.vertical, 3)
                     .background(Color.secondary.opacity(0.15))
                     .clipShape(Capsule())
+                Button(action: onDismiss) {
+                    Image(systemName: "xmark")
+                        .foregroundStyle(.secondary)
+                        .font(.caption)
+                }
             }
             Text(recipe.description)
                 .font(.subheadline)

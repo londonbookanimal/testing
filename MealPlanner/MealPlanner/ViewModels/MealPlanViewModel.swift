@@ -71,6 +71,20 @@ class MealPlanViewModel: ObservableObject {
         }
     }
 
+    func removeRecipeFromPlan(_ plan: MealPlan) async {
+        guard let id = plan.id else { return }
+        do {
+            try await firebase.deleteMealPlan(id: id)
+            mealPlans.removeAll { $0.id == id }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func dismissSuggestion(_ recipe: Recipe) {
+        suggestedRecipes.removeAll { $0.id == recipe.id }
+    }
+
     func plan(for date: Date) -> MealPlan? {
         mealPlans.first { Calendar.current.isDate($0.date, inSameDayAs: date) }
     }

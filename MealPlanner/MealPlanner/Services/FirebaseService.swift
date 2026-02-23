@@ -150,6 +150,10 @@ class FirebaseService: ObservableObject {
         ])
     }
 
+    func deleteRecipe(id: String) async throws {
+        try await recipesCollection.document(id).delete()
+    }
+
     // MARK: - Meal Plans
 
     func fetchMealPlans(from startDate: Date, to endDate: Date) async throws -> [MealPlan] {
@@ -172,6 +176,10 @@ class FirebaseService: ObservableObject {
             saved.id = ref.documentID
             return saved
         }
+    }
+
+    func deleteMealPlan(id: String) async throws {
+        try await mealPlansCollection.document(id).delete()
     }
 
     func markMealPlanCooked(id: String) async throws {
