@@ -79,14 +79,17 @@ class FirebaseService: ObservableObject {
     // MARK: - Food Items
 
     func fetchFoodItems(location: FoodLocation? = nil) async throws -> [FoodItem] {
-        var query: Query = foodItemsCollection.order(by: "name")
+        let query: Query
         if let location = location {
             query = foodItemsCollection
                 .whereField("location", isEqualTo: location.rawValue)
-                .order(by: "name")
+        } else {
+            query = foodItemsCollection
         }
         let snapshot = try await query.getDocuments()
-        return snapshot.documents.compactMap { try? $0.data(as: FoodItem.self) }
+        return snapshot.documents
+            .compactMap { try? $0.data(as: FoodItem.self) }
+            .sorted { $0.name < $1.name }
     }
 
     func saveFoodItem(_ item: FoodItem) async throws -> FoodItem {
