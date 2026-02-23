@@ -119,6 +119,8 @@ struct TonightsDinnerCard: View {
                         ForEach(mealPlanVM.suggestedRecipes) { recipe in
                             RecipeSuggestionCard(recipe: recipe) {
                                 Task { await mealPlanVM.assignRecipe(recipe, toDate: Date()) }
+                            } onDismiss: {
+                                mealPlanVM.dismissSuggestion(recipe)
                             }
                         }
                     }
