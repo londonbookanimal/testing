@@ -22,7 +22,7 @@
 	<string>1</string>
 	<key>UILaunchScreen</key>
 	<dict/>
-<key>NSCameraUsageDescription</key>
+	<key>NSCameraUsageDescription</key>
 	<string>Take a photo of your fridge or pantry so we can identify your ingredients.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Choose a photo of your fridge or pantry to identify your ingredients.</string>
